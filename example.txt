@@ -1,0 +1,139 @@
+Do ogarnięcia: template'y, sprawdzanie zwracanych wartości, (ALP można wzorować na RTP), network byte order, 
+		endianness!, ACK wiadomości dla niezawodności, printowanie wiadomości diagn. na serwerze,
+		(unikalne ID aplikacji w krotkach, żeby móc uruchomić 2 różne aplikacje na raz)
+
+
+-------------DO POPRAWY----------------------------------
+
+/*
+ * Format wiadomości ALP: 
+***| ID | Typ operacji (1 bajt) | Długość krotki (2 bajty) | Krotka (n bajtów) |    <--- POPRAWIĆ! <<<----!
+ *
+ * Typ operacji:
+ * 0x01 - OUT
+ * 0x02 - IN
+ * 0x03 - INP
+ * 0x04 - RD
+ * 0x05 - RDP
+ *
+ * Długość krotki jest wyrażona w bajtach i obejmuje całą krotkę.
+ *
+ * Krotka jest ciągiem bajtów o określonej długości. Format krotki zależy od implementacji.
+ */
+
+#define ALP_OUT 0x01
+#define ALP_IN 0x02
+#define ALP_RD 0x03
+#define ALP_EVAL 0x04
+
+typedef struct {
+    uint8_t op_type;
+    uint16_t tuple_length;
+    uint8_t *tuple;
+} ALPMessage;
+
+// Funkcje do serializacji i deserializacji wiadomości ALP
+ALPMessage *alp_deserialize(uint8_t *buffer, size_t length);
+uint8_t *alp_serialize(ALPMessage *message, size_t *length);
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+// Definicja typów danych
+#define TYPE_INT 0x01
+#define TYPE_FLOAT 0x02
+#define TYPE_STRING 0x03
+
+// Struktura dla pola
+typedef struct {
+    uint8_t data_type;
+    void *data;
+} Field;
+
+// Struktura dla krotki
+typedef struct {
+    uint16_t num_fields;
+    Field **fields;
+} Tuple;
+
+// Funkcje do tworzenia i usuwania krotek i pól
+Tuple *create_tuple(uint16_t num_fields) {
+    Tuple *tuple = malloc(sizeof(Tuple));
+    tuple->num_fields = num_fields;
+    tuple->fields = malloc(num_fields * sizeof(Field *));
+    return tuple;
+}
+
+void delete_tuple(Tuple *tuple) {
+    for (int i = 0; i < tuple->num_fields; i++) {
+        delete_field(tuple->fields[i]);
+    }
+    free(tuple->fields);
+    free(tuple);
+}
+
+Field *create_field(uint8_t data_type, void *data) {
+    Field *field = malloc(sizeof(Field));
+    field->data_type = data_type;
+    field->data = data;
+    return field;
+}
+
+void delete_field(Field *field) {
+    free(field->data);
+    free(field);
+}
+
+// Funkcje do serializacji i deserializacji
+uint8_t *serialize_tuple(Tuple *tuple, size_t *length) {
+    // Oblicz długość bufora
+    *length = sizeof(tuple->num_fields);
+    for (int i = 0; i < tuple->num_fields; i++) {
+        *length += sizeof(tuple->fields[i]->data_type) + sizeof(tuple->fields[i]->data);
+    }
+
+    // Utwórz bufor
+    uint8_t *buffer = malloc(*length);
+    uint8_t *ptr = buffer;
+
+    // Zapisz liczbę pól
+    memcpy(ptr, &tuple->num_fields, sizeof(tuple->num_fields));
+    ptr += sizeof(tuple->num_fields);
+
+    // Zapisz pola
+    for (int i = 0; i < tuple->num_fields; i++) {
+        memcpy(ptr, &tuple->fields[i]->data_type, sizeof(tuple->fields[i]->data_type));
+        ptr += sizeof(tuple->fields[i]->data_type);
+        memcpy(ptr, tuple->fields[i]->data, sizeof(tuple->fields[i]->data));
+        ptr += sizeof(tuple->fields[i]->data);
+    }
+
+    return buffer;
+}
+
+Tuple *deserialize_tuple(uint8_t *buffer, size_t length) {
+    uint8_t *ptr = buffer;
+
+    // Odczytaj liczbę pól
+    uint16_t num_fields;
+    memcpy(&num_fields, ptr, sizeof(num_fields));
+    ptr += sizeof(num_fields);
+
+    // Utwórz krotkę
+    Tuple *tuple = create_tuple(num_fields);
+
+    // Odczytaj pola
+    for (int i = 0; i < num_fields; i++) {
+        uint8_t data_type;
+        memcpy(&data_type, ptr, sizeof(data_type));
+        ptr += sizeof(data_type);
+        void *data = malloc(sizeof(data_type));
+        memcpy(data, ptr, sizeof(data_type));
+        ptr += sizeof(data_type);
+        tuple->fields[i] = create_field(data_type, data);
+    }
+
+    return tuple;
+}
