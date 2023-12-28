@@ -70,6 +70,7 @@ void delete_tuple(Tuple *tuple) {
     free(tuple);
 }
 
+
 Field *create_field(uint8_t data_type, void *data) {
     Field *field = malloc(sizeof(Field));
     field->data_type = data_type;
