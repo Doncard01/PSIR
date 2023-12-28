@@ -1,13 +1,13 @@
 Do ogarnięcia: template'y, sprawdzanie zwracanych wartości, (ALP można wzorować na RTP), network byte order, 
 		endianness!, ACK wiadomości dla niezawodności, printowanie wiadomości diagn. na serwerze,
-		(unikalne ID aplikacji w krotkach, żeby móc uruchomić 2 różne aplikacje na raz)
+		(unikalne ID aplikacji w krotkach, żeby móc uruchomić 2 różne aplikacje na raz) 10000
 
 
 -------------DO POPRAWY----------------------------------
 
 /*
  * Format wiadomości ALP: 
-***| ID | Typ operacji (1 bajt) | Długość krotki (2 bajty) | Krotka (n bajtów) |    <--- POPRAWIĆ! <<<----!
+***| ID (1 bajt) | Typ operacji (1 bajt) | Długość krotki (2 bajty) | Krotka (n bajtów) |    <--- POPRAWIĆ! <<<----! tuple_space.h
  *
  * Typ operacji:
  * 0x01 - OUT
@@ -32,10 +32,6 @@ typedef struct {
     uint8_t *tuple;
 } ALPMessage;
 
-// Funkcje do serializacji i deserializacji wiadomości ALP
-ALPMessage *alp_deserialize(uint8_t *buffer, size_t length);
-uint8_t *alp_serialize(ALPMessage *message, size_t *length);
-
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -46,13 +42,13 @@ uint8_t *alp_serialize(ALPMessage *message, size_t *length);
 #define TYPE_FLOAT 0x02
 #define TYPE_STRING 0x03
 
-// Struktura dla pola
+// Struktura dla pola | TYP | ZAWARTOSC | int16_t or float32_t (or string*)
 typedef struct {
     uint8_t data_type;
     void *data;
 } Field;
 
-// Struktura dla krotki
+// Struktura dla krotki  (string, ...)		
 typedef struct {
     uint16_t num_fields;
     Field **fields;
