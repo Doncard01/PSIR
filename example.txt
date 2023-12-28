@@ -36,7 +36,7 @@ Do ogarnięcia: template'y, sprawdzanie zwracanych wartości, (ALP można wzorow
 
 typedef struct {
     uint8_t op_type;
-    uint16_t tuple_length;
+    uint8_t number_of_fields;
     uint8_t *tuple;
 } ALPMessage;
 
@@ -50,7 +50,7 @@ typedef struct {
 #define TYPE_FLOAT 0x02
 #define TYPE_STRING 0x03
 
-// Struktura dla pola | TYP | ZAWARTOSC | int16_t or float32_t (or string*)
+// Struktura dla pola | TYP | ZAWARTOSC | int or float (or string*)
 typedef struct {
     uint8_t data_type;
     void *data;
