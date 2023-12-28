@@ -1,30 +1,37 @@
 Do ogarnięcia: template'y, sprawdzanie zwracanych wartości, (ALP można wzorować na RTP), network byte order, 
 		endianness!, ACK wiadomości dla niezawodności, printowanie wiadomości diagn. na serwerze,
-		(unikalne ID aplikacji w krotkach, żeby móc uruchomić 2 różne aplikacje na raz) 10000
+		(unikalne ID aplikacji w krotkach, żeby móc uruchomić 2 różne aplikacje na raz)
 
 
 -------------DO POPRAWY-----------------------------------------
 
 /*
- * Format wiadomości ALP: 
-***| ID (1 bajt) | Typ operacji (1 bajt) | Długość krotki (2 bajty) | Krotka (n bajtów) |    <--- POPRAWIĆ! <<<----! tuple_space.h
+ * Payload UDP: 1472 bajty, nagłówek ALP: 3 bajty, krotka 1469 bajtów
+ * 
+ * Format wiadomości ALP:
+***| ID (1 bajt) | Typ operacji (1 bajt) | Liczba pól (1 bajt) | Krotka (n bajtów, max 1469) |    <--- tuple_space.h
  *
- * Typ operacji:
+ * Typ operacji: 
  * 0x01 - OUT
  * 0x02 - IN
  * 0x03 - INP
  * 0x04 - RD
  * 0x05 - RDP
+ * 0x06 - ACK - potwierdzenie odebrania pakietu
  *
  * Długość krotki jest wyrażona w bajtach i obejmuje całą krotkę.
  *
  * Krotka jest ciągiem bajtów o określonej długości. Format krotki zależy od implementacji.
+ * in(adam, 123, ?float)
  */
 
-#define ALP_OUT 0x01
-#define ALP_IN 0x02
-#define ALP_RD 0x03
-#define ALP_EVAL 0x04
+#define ALP_OUT 0x01  // 0000 0001
+#define ALP_IN  0x02  // 0000 0010
+#define ALP_INP 0x04  // 0000 0100
+#define ALP_RD  0x08  // 0000 1000
+#define ALP_RDP 0x10  // 0001 0000
+#define ALP_ACK 0x20  // 0010 0000
+
 
 typedef struct {
     uint8_t op_type;
@@ -69,6 +76,7 @@ void delete_tuple(Tuple *tuple) {
     free(tuple->fields);
     free(tuple);
 }
+
 
 Field *create_field(uint8_t data_type, void *data) {
     Field *field = malloc(sizeof(Field));
