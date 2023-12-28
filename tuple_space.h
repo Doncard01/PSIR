@@ -1,3 +1,6 @@
+#ifndef TUPLE_SPACE_H
+#define TUPLE_SPACE_H
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -12,26 +15,31 @@
 #define ALP_ACK 0x20  // 0010 0000
 
 // Data types
-#define TYPE_INT 0x01 // 0000 0001
-#define TYPE_FLOAT 0x02 // 0000 0010
-#define TYPE_STRING 0x04 // 0000 0100
+#define TS_INT 0
+#define TS_FLOAT 1
 #define INT_SIZE sizeof(int)
 #define FLOAT_SIZE sizeof(float)
-#define STRING_SIZE 1 // 1 byte
+#define YES 1
+#define NO 0
+#define TS_SUCCESS 1
+#define TS_FAIL 0
 
 // ALP message structure
 typedef struct {
-    uint8_t app_id;
     uint8_t op_type;
-    uint8_t number_of_fields;
-    uint8_t *tuple;
+    uint16_t msg_len;
+    Tuple *tuple;
 } ALPMessage;
 
 
 // Tuple field structure: | TYPE | DATA |
 typedef struct {
-    uint8_t data_type;
-    void *data;
+    uint8_t is_actual; // YES or NO
+    uint8_t type; // TS_INT or TS_FLOAT
+    union {
+        int int_field;
+        float float_field;
+    } data;
 } Field;
 
 // Tuple structure: (Field1, Field2, ...)
@@ -39,3 +47,43 @@ typedef struct {
     uint8_t num_fields;
     Field **fields;
 } Tuple;
+
+// Tuple space structure
+typedef struct {
+    Tuple **tuples;
+    uint8_t num_tuples;
+} TupleSpace;
+
+uint8_t ts_out(char* tuple_name, Field* fields, int num_fields) {
+    // Implementation goes here
+    // ...
+    return TS_SUCCESS; // or TS_FAIL
+}
+
+uint8_t ts_in(char* tuple_name, Field* fields, int num_fields) {
+    // Implementation goes here
+    // ...
+    return TS_SUCCESS; // or TS_FAIL
+}
+
+uint8_t ts_inp(char* tuple_name, Field* fields, int num_fields) {
+    // Implementation goes here
+    // ...
+    return TS_SUCCESS; // or TS_FAIL
+}
+
+uint8_t ts_rd(char* tuple_name, Field* fields, int num_fields) {
+    // Implementation goes here
+    // ...
+    return TS_SUCCESS; // or TS_FAIL
+}
+
+uint8_t ts_rdp(char* tuple_name, Field* fields, int num_fields) {
+    // Implementation goes here
+    // ...
+    return TS_SUCCESS; // or TS_FAIL
+}
+
+
+
+#endif

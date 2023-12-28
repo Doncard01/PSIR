@@ -9,7 +9,7 @@ Do ogarnięcia: template'y, sprawdzanie zwracanych wartości, (ALP można wzorow
  * Payload UDP: 1472 bajty, nagłówek ALP: 3 bajty, krotka 1469 bajtów
  * 
  * Format wiadomości ALP:
-***| ID (1 bajt) | Typ operacji (1 bajt) | Liczba pól (1 bajt) | Krotka (n bajtów, max 1469) |    <--- tuple_space.h
+***| Typ operacji (1 bajt) | Długość wiadomości (2 bajt) | Krotka (n bajtów, max 1469) |    <--- tuple_space.h
  *
  * Typ operacji: 
  * 0x01 - OUT
@@ -36,7 +36,7 @@ Do ogarnięcia: template'y, sprawdzanie zwracanych wartości, (ALP można wzorow
 
 typedef struct {
     uint8_t op_type;
-    uint8_t number_of_fields;
+    uint16_t msg_len;
     uint8_t *tuple;
 } ALPMessage;
 
@@ -61,12 +61,12 @@ typedef struct {
 
 // Struktura dla krotki  (string, ...)		
 typedef struct {
-    uint16_t num_fields;
+    uint8_t num_fields;
     Field **fields;
 } Tuple;
 
 // Funkcje do tworzenia i usuwania krotek i pól
-Tuple *create_tuple(uint16_t num_fields) {
+Tuple *create_tuple(uint8_t num_fields) {
     Tuple *tuple = malloc(sizeof(Tuple));
     tuple->num_fields = num_fields;
     tuple->fields = malloc(num_fields * sizeof(Field *));
@@ -125,7 +125,7 @@ Tuple *deserialize_tuple(uint8_t *buffer, size_t length) {
     uint8_t *ptr = buffer;
 
     // Odczytaj liczbę pól
-    uint16_t num_fields;
+    uint8_t num_fields;
     memcpy(&num_fields, ptr, sizeof(num_fields));
     ptr += sizeof(num_fields);
 
