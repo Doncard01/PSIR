@@ -3,7 +3,7 @@ Do ogarnięcia: template'y, sprawdzanie zwracanych wartości, (ALP można wzorow
 		(unikalne ID aplikacji w krotkach, żeby móc uruchomić 2 różne aplikacje na raz) 10000
 
 
--------------DO POPRAWY----------------------------------
+-------------DO POPRAWY-----------------------------------------
 
 /*
  * Format wiadomości ALP: 
