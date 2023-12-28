@@ -54,36 +54,12 @@ typedef struct {
     uint8_t num_tuples;
 } TupleSpace;
 
-uint8_t ts_out(char* tuple_name, Field* fields, int num_fields) {
-    // Implementation goes here
-    // ...
-    return TS_SUCCESS; // or TS_FAIL
-}
-
-uint8_t ts_in(char* tuple_name, Field* fields, int num_fields) {
-    // Implementation goes here
-    // ...
-    return TS_SUCCESS; // or TS_FAIL
-}
-
-uint8_t ts_inp(char* tuple_name, Field* fields, int num_fields) {
-    // Implementation goes here
-    // ...
-    return TS_SUCCESS; // or TS_FAIL
-}
-
-uint8_t ts_rd(char* tuple_name, Field* fields, int num_fields) {
-    // Implementation goes here
-    // ...
-    return TS_SUCCESS; // or TS_FAIL
-}
-
-uint8_t ts_rdp(char* tuple_name, Field* fields, int num_fields) {
-    // Implementation goes here
-    // ...
-    return TS_SUCCESS; // or TS_FAIL
-}
-
+// Implementation in .c files
+uint8_t ts_out(char* tuple_name, Field* fields, int num_fields);
+uint8_t ts_in(char* tuple_name, Field* fields, int num_fields);
+uint8_t ts_inp(char* tuple_name, Field* fields, int num_fields);
+uint8_t ts_rd(char* tuple_name, Field* fields, int num_fields);
+uint8_t ts_rdp(char* tuple_name, Field* fields, int num_fields);
 
 
 #endif
