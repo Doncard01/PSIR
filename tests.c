@@ -16,13 +16,16 @@ void printBufferInBinary(uint8_t *buffer, uint16_t length) {
 
 int main() {
     uint8_t *buffer = (uint8_t *)malloc(BUFSIZE * sizeof(uint8_t));
+    memset(buffer, 0, BUFSIZE * sizeof(uint8_t));
 
     // Creating a sample Tuple structure
     Tuple myTuple;
     myTuple.num_fields = 3;
     myTuple.fields = (Field *)malloc(myTuple.num_fields * sizeof(Field));
+    memset(myTuple.fields, 0, myTuple.num_fields * sizeof(Field));
     myTuple.fields[0].type = TS_STRING;
-    myTuple.fields[0].data.string_field = "Hello";
+    myTuple.fields[0].data.string_field.value = "Hello";
+    myTuple.fields[0].data.string_field.length = strlen(myTuple.fields[0].data.string_field.value); // strlen("Hello")
     myTuple.fields[1].type = TS_INT;
     myTuple.fields[1].data.int_field = 123;
     myTuple.fields[2].type = TS_FLOAT;
@@ -31,13 +34,15 @@ int main() {
     uint16_t msg_len = serialize_tuple(&myTuple, buffer);
     printf("Message length: %d\n", msg_len);
 
-    Tuple received = deserialize_tuple(buffer);
-    tupleToString(&received);
-    printBufferInBinary(buffer, msg_len);
+    Tuple *received = (Tuple *)malloc(sizeof(Tuple));
 
-    printf("Field 1: %s\n", received.fields[0].data.string_field);
-    printf("Field 2: %d\n", received.fields[1].data.int_field);
-    printf("Field 3: %f\n", received.fields[2].data.float_field);
+    received->num_fields = myTuple.num_fields;
+    received->fields = (Field *)malloc(received->num_fields * sizeof(Field));
+
+    deserialize_tuple(buffer, received);
+    printTuple(received);
+    printBufferInBinary(buffer, msg_len);
+    tupleToString(received);
 
     free(myTuple.fields);
     free(buffer);

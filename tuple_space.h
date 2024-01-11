@@ -31,6 +31,11 @@
 
 #define BUFSIZE 1469 //max tuple length in bytes
 
+typedef struct {
+    uint8_t length;
+    char* value;
+} StringField;
+
 // Tuple field structure: | TYPE | DATA |
 typedef struct {
     uint8_t is_actual; // YES or NO
@@ -38,7 +43,7 @@ typedef struct {
     union {
         int int_field;
         float float_field;
-        char* string_field;
+        StringField string_field;
     } data;
 } Field;
 
@@ -61,7 +66,7 @@ void tupleToString(Tuple *tuple) {
                 printf("%f", tuple->fields[i].data.float_field);
                 break;
             case TS_STRING:
-                printf("%s", tuple->fields[i].data.string_field);
+                printf("%s", tuple->fields[i].data.string_field.value);
                 break;
             default:
                 printf("Unknown type");
@@ -80,37 +85,6 @@ typedef struct {
     uint16_t msg_len;
     Tuple *tuple;
 } ALPMessage;
-
-// char ** convertTupleToBits(Tuple *tuple) {
-//     // Allocate memory for an array of binary representations
-//     char **binaryRepresentations = (char **)malloc(tuple->num_fields * sizeof(char *));
-
-//     for (int i = 0; i < tuple->num_fields; ++i) {
-//         int maxBinarySize = (tuple->fields[i].type == TS_INT) ? sizeof(int) * 8 : sizeof(float) * 8;
-//         binaryRepresentations[i] = (char *)malloc(maxBinarySize + 1);  // +1 for null terminator
-
-//         if (tuple->fields[i].type == TS_INT) {
-//             // Example conversion for int (32 bits)
-//             uint32_t int_bits;
-//             memcpy(&int_bits, &tuple->fields[i].data.int_field, sizeof(int));
-//             for (int j = 0; j < INT_FIELD_SIZE * 8; j++) {
-//                 binaryRepresentations[i][j] = '0' + ((int_bits >> (sizeof(int) * 8 - 1 - j)) & 1);
-
-//         }binaryRepresentations[i][sizeof(int) * 8] = '\0';  // Null-terminate the string
-//         } else if (tuple->fields[i].type == TS_FLOAT) {
-//             // Example conversion for float (32 bits)
-//             uint32_t float_bits;
-//             memcpy(&float_bits, &tuple->fields[i].data.float_field, sizeof(float));
-//             for (int j = 0; j < FLOAT_FIELD_SIZE * 8; j++) {
-//                 binaryRepresentations[i][j] = '0' + ((float_bits >> (sizeof(float) * 8 - 1 - j)) & 1);
-//             }
-//             binaryRepresentations[i][sizeof(float) * 8] = '\0';  // Null-terminate the string
-//         }
-//         // Add handling for other types if necessary
-//     }
-//     return binaryRepresentations;
-// }
-
 
 int convertBinaryToInt(const char *binary) {
     int result = 0;
@@ -164,85 +138,81 @@ uint16_t serialize_tuple(Tuple *tuple, uint8_t *buffer) {
     ptr += NUM_FIELD_SIZE;
 
     for (int i = 0; i < tuple->num_fields; i++) {
-        memcpy(ptr, &tuple->fields[i].type, TYPE_FIELD_SIZE);
-        ptr += TYPE_FIELD_SIZE;
+        *(ptr++) = tuple->fields[i].type;
+        length += 1;
         length += TYPE_FIELD_SIZE;
         if (tuple->fields[i].type == TS_INT) {
             length += INT_FIELD_SIZE;
-            ptr += INT_FIELD_SIZE;
             memcpy(ptr, &tuple->fields[i].data.int_field, sizeof(tuple->fields[i].data.int_field));
+            ptr += INT_FIELD_SIZE;
         } else if (tuple->fields[i].type == TS_FLOAT) {
             length += FLOAT_FIELD_SIZE;
-            ptr += FLOAT_FIELD_SIZE;
             memcpy(ptr, &tuple->fields[i].data.float_field, sizeof(tuple->fields[i].data.float_field));
+            ptr += FLOAT_FIELD_SIZE;
         } else if (tuple->fields[i].type == TS_STRING) {
-            uint8_t field_length = strlen(tuple->fields[i].data.string_field);
-            memcpy(ptr, &tuple->fields[i].data.string_field, field_length);
+            uint8_t field_length = tuple->fields[i].data.string_field.length;
+            *(ptr++) = field_length;
+            length += 1;
+            strcpy((char *)ptr, tuple->fields[i].data.string_field.value);
             ptr += field_length;
             length += field_length;
-            *(ptr++) = '\0';
-            length += 1;
         }
     }
 
     return length;
 }
 
-Tuple deserialize_tuple(uint8_t *buffer) {
-    Tuple tuple;
-
+void deserialize_tuple(uint8_t *buffer, Tuple *tuple) {
     uint8_t *ptr = buffer;
 
-    tuple.num_fields = *(uint8_t *)ptr;
+    tuple->num_fields = *(uint8_t *)ptr;
     ptr += NUM_FIELD_SIZE;
 
-    Field fields[tuple.num_fields];
-    tuple.fields = fields;
+    tuple->fields = (Field *)malloc(tuple->num_fields * sizeof(Field));
 
-    for (int i = 0; i < tuple.num_fields; i++) {
-        tuple.fields[i].type = *(uint8_t *)ptr;
-        ptr += TYPE_FIELD_SIZE;
-        if (tuple.fields[i].type == TS_INT) {
-            tuple.fields[i].data.int_field = *(int *)ptr;
+    for (int i = 0; i < tuple->num_fields; i++) {
+        tuple->fields[i].type = *(uint8_t *)ptr;
+        ptr += 1;
+        if (tuple->fields[i].type == TS_INT) {
+            tuple->fields[i].data.int_field = *(int *)ptr;
             ptr += INT_FIELD_SIZE;
-        } else if (tuple.fields[i].type == TS_FLOAT) {
-            tuple.fields[i].data.float_field = *(float *)ptr;
+        } else if (tuple->fields[i].type == TS_FLOAT) {
+            tuple->fields[i].data.float_field = *(float *)ptr;
             ptr += FLOAT_FIELD_SIZE;
-        } else if (tuple.fields[i].type == TS_STRING) {
-            uint8_t string_length = 1;
-            char next_char = *(char *)ptr;
-            while (next_char != '\0') {
-                ptr++;
-                string_length++;
-                next_char = *(char *)ptr;
-            }
-            char* string = (char *)malloc(string_length * sizeof(char));
-            for (int j = 0; j <= string_length; j++) {
-                if (j == string_length) {
-                    string[j] = '\0';
-                    break;
-                }
-                string[j] = *(char *)(ptr - string_length + j);
-            }
-            tuple.fields[i].data.string_field = string;
-            ptr++;
+        } else if (tuple->fields[i].type == TS_STRING) {
+            uint8_t field_length = *(uint8_t *)ptr; // Read the length of the string field
+            tuple->fields[i].data.string_field.length = field_length;
+            ptr += 1;
+            tuple->fields[i].data.string_field.value = (char *)malloc(field_length + 1);
+            strncpy(tuple->fields[i].data.string_field.value, (char *)ptr, field_length);
+            tuple->fields[i].data.string_field.value[field_length] = '\0';
+            ptr += field_length;
         }
     }
-
-    return tuple;
 }
 
+// void free_tuple(Tuple *tuple) {
+//     for (int i = 0; i < tuple->num_fields; ++i) {
+//         if (tuple->fields[i].type == TS_STRING) {
+//             free(tuple->fields[i].data.string_field.length);
+//             free(tuple->fields[i].data.string_field.value);
+//         }
+//     }
+//     free(tuple->fields);
+//     free(tuple);
+// }
 
 void printTuple(Tuple *tuple) {
     for (int i = 0; i < tuple->num_fields; ++i) {
         if (tuple->fields[i].type == TS_INT) {
-            printf("Field %d (Type: INT): %d\n", i + 1, tuple->fields[i].data.int_field);
+            printf("Field %d (Type: INT): %d\n", i, tuple->fields[i].data.int_field);
         } else if (tuple->fields[i].type == TS_FLOAT) {
-            printf("Field %d (Type: FLOAT): %f\n", i + 1, tuple->fields[i].data.float_field);
+            printf("Field %d (Type: FLOAT): %f\n", i, tuple->fields[i].data.float_field);
+        } else if (tuple->fields[i].type == TS_STRING) {
+            printf("Field %d (Type: STRING): %s[len=%d]\n", i, tuple->fields[i].data.string_field.value, 
+            tuple->fields[i].data.string_field.length);    
         }
-        // Add handling for other types if necessary
     }
 }
-
 
 #endif
