@@ -44,7 +44,7 @@ int main() {
     printBufferInBinary(buffer, msg_len);
     tupleToString(received);
 
-    free(myTuple.fields);
+    free_tuple(received);
     free(buffer);
 
     return 0;

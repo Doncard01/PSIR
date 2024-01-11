@@ -191,16 +191,16 @@ void deserialize_tuple(uint8_t *buffer, Tuple *tuple) {
     }
 }
 
-// void free_tuple(Tuple *tuple) {
-//     for (int i = 0; i < tuple->num_fields; ++i) {
-//         if (tuple->fields[i].type == TS_STRING) {
-//             free(tuple->fields[i].data.string_field.length);
-//             free(tuple->fields[i].data.string_field.value);
-//         }
-//     }
-//     free(tuple->fields);
-//     free(tuple);
-// }
+void free_tuple(Tuple *tuple) {
+    for (int i = 0; i < tuple->num_fields; ++i) {
+        if (tuple->fields[i].type == TS_STRING) {
+            free(tuple->fields[i].data.string_field.value);
+        }
+    }
+    free(tuple->fields);
+    free(tuple);
+}
+
 
 void printTuple(Tuple *tuple) {
     for (int i = 0; i < tuple->num_fields; ++i) {
