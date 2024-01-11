@@ -1,5 +1,5 @@
-#ifndef ALP_H
-#define ALP_H
+#ifndef TUPLE_SPACE_H
+#define TUPLE_SPACE_H
 
 #include <stdio.h>
 #include <stdint.h>
