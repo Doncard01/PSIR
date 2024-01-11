@@ -23,7 +23,7 @@ Do ogarnięcia: template'y, sprawdzanie zwracanych wartości, (ALP można wzorow
  *
  * Krotka jest ciągiem bajtów o określonej długości. Format krotki: Pierwsze pole to zawsze string(max 128 bajtów), kolejne int lub float (do wykorzystania sizeof!), 
 									łącznie krotka <= 1469 bajtów
- * in(adam, 123, ?float)
+ * in(adam, 123, ?float) '\0'
  */
 
 #define ALP_OUT 0x01  // 0000 0001
