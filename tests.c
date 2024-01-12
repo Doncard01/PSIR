@@ -30,7 +30,9 @@ int main() {
     myTuple.fields[1].data.int_field = 123;
     myTuple.fields[2].type = TS_FLOAT;
     myTuple.fields[2].data.float_field = 3.14;
-
+    TupleSpace myTupleSpace;
+    out(&myTupleSpace, &myTuple);
+    
     uint16_t msg_len = serialize_tuple(&myTuple, buffer);
     printf("Message length: %d\n", msg_len);
 
