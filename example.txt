@@ -9,7 +9,7 @@ Do ogarnięcia: template'y, sprawdzanie zwracanych wartości, (ALP można wzorow
  * Payload UDP: 1472 bajty, nagłówek ALP: 3 bajty, krotka 1469 bajtów
  * 
  * Format wiadomości ALP:
-***| Typ operacji (1 bajt) | Długość wiadomości (2 bajt) | Krotka (n bajtów, max 1469) |    <--- tuple_space.h
+***| Typ operacji (1 bajt) | Długość wiadomości (2 bajt) | Krotka (n bajtów, max 256) |    <--- tuple_space.h
  *
  * Typ operacji: 
  * 0x01 - OUT

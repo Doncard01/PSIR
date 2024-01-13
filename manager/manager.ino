@@ -4,7 +4,7 @@
 #include <ZsutFeatures.h>
 #include "tuple_space.h"
 
-#define PACKET_BUFFER_LENGTH 256
+#define BUFSIZE 256
 #define UDP_PORT 9545
 #define PERIOD 1000
 
@@ -12,9 +12,9 @@ unsigned long time_now = 0;
 ZsutIPAddress TupleSpace_IP = ZsutIPAddress(169,254,97,104);
 byte mac[]={0x00, 0xAA, 0xBB, 0xCC, 0xDE, 0x01}; 
 
-uint8_t packetBuffer[PACKET_BUFFER_LENGTH];
-uint8_t sendBuffer[PACKET_BUFFER_LENGTH];
-uint8_t tuple_buffer[PACKET_BUFFER_LENGTH];
+uint8_t packetBuffer[BUFSIZE];
+uint8_t sendBuffer[BUFSIZE];
+uint8_t tuple_buffer[BUFSIZE];
 
 unsigned int localPort=UDP_PORT;    
 
@@ -79,8 +79,8 @@ void loop() {
     //odbior pakietu
     int packetSize=Udp.parsePacket(); 
     if(packetSize>0) {
-        //czytamy pakiet - maksymalnie do 'PACKET_BUFFER_LENGTH' bajtow
-        int len=Udp.read(packetBuffer, PACKET_BUFFER_LENGTH);
+        //czytamy pakiet - maksymalnie do 'BUFSIZE' bajtow
+        int len=Udp.read(packetBuffer, BUFSIZE);
 
         Serial.print("Recieved: ");
         packetBuffer[len]='\0';
