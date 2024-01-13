@@ -4,16 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-void printBufferInBinary(uint8_t *buffer, uint16_t length) {
-    for (int i = 0; i < length; i++) {
-        for (int j = 7; j >= 0; j--) {
-            printf("%d", (buffer[i] >> j) & 1);
-        }
-        printf(" ");
-    }
-    printf("\n");
-}
-
 int main() {
     uint8_t *buffer = (uint8_t *)malloc(BUFSIZE * sizeof(uint8_t));
     memset(buffer, 0, BUFSIZE * sizeof(uint8_t));
@@ -30,17 +20,22 @@ int main() {
     myTuple.fields[1].data.int_field = 123;
     myTuple.fields[2].type = TS_FLOAT;
     myTuple.fields[2].data.float_field = 3.14;
-    TupleSpace myTupleSpace;
-    out(&myTupleSpace, &myTuple);
+    // TupleSpace myTupleSpace;
+    // out(&myTupleSpace, &myTuple);
     
     uint16_t msg_len = serialize_tuple(&myTuple, buffer);
     printf("Message length: %d\n", msg_len);
+    // wyslanie UDP...
 
     Tuple *received = (Tuple *)malloc(sizeof(Tuple));
 
-    received->num_fields = myTuple.num_fields;
-    received->fields = (Field *)malloc(received->num_fields * sizeof(Field));
+    // odbior UDP
+    deserialize_tuple(buffer, received);
+    printTuple(received);
+    printBufferInBinary(buffer, msg_len);
+    tupleToString(received);
 
+    // odbior UDP
     deserialize_tuple(buffer, received);
     printTuple(received);
     printBufferInBinary(buffer, msg_len);
