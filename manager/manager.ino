@@ -9,7 +9,7 @@
 #define PERIOD 1000
 
 unsigned long time_now = 0;
-ZsutIPAddress TupleSpace_IP = ZsutIPAddress(169,254,97,104);
+ZsutIPAddress TupleSpace_IP = ZsutIPAddress(192,168,56,104);
 byte mac[]={0x00, 0xAA, 0xBB, 0xCC, 0xDE, 0x01}; 
 
 uint8_t packetBuffer[BUFSIZE];
@@ -22,6 +22,23 @@ uint16_t msg_len;
 
 ZsutEthernetUDP Udp;
 
+int alp_send(ZsutEthernetUDP &udp, ZsutIPAddress dest_ip, int dest_port, Tuple *tuple, uint8_t type) {
+    ALPMessage alpMsg;
+    alpMsg.op_type = type;
+    alpMsg.tuple = tuple;
+
+    uint8_t alpBuffer[BUFSIZE];
+    uint16_t alpMsgLen = serialize_tuple(alpMsg.tuple, alpBuffer + TYPE_FIELD_SIZE);
+
+    alpMsg.msg_len = alpMsgLen;
+    memcpy(alpBuffer + TYPE_FIELD_SIZE, &alpMsg.msg_len, sizeof(alpMsg.msg_len));
+
+    udp.beginPacket(dest_ip, dest_port);
+    udp.write(alpBuffer, alpMsgLen + TYPE_FIELD_SIZE);
+    udp.endPacket();
+
+    return TS_SUCCESS;
+}
 void setup() {
     memset(&packetBuffer, 0, sizeof(packetBuffer));
     memset(&sendBuffer, 0, sizeof(sendBuffer));
@@ -76,6 +93,17 @@ void loop() {
     while(millis() < time_now + PERIOD){
         //wait approx. [PERIOD] ms
     }
+    Tuple myTuple1;
+    myTuple1.num_fields = 3;
+    myTuple1.fields = (Field *)malloc(myTuple1.num_fields * sizeof(Field));
+    memset(myTuple1.fields, 0, myTuple1.num_fields * sizeof(Field));
+    myTuple1.fields[0].type = TS_STRING;
+    myTuple1.fields[0].data.string_field.value = "Hello";
+    myTuple1.fields[0].data.string_field.length = strlen(myTuple1.fields[0].data.string_field.value);
+    myTuple1.fields[1].type = TS_INT;
+    myTuple1.fields[1].data.int_field = 123;
+    myTuple1.fields[2].type = TS_FLOAT;
+    myTuple1.fields[2].data.float_field = 3.14;
     //odbior pakietu
     int packetSize=Udp.parsePacket(); 
     if(packetSize>0) {
@@ -88,10 +116,9 @@ void loop() {
         memset(&packetBuffer, 0, sizeof(packetBuffer));
   
     } else {
-      Serial.println("Sending tuple...");
-      Udp.beginPacket(TupleSpace_IP, UDP_PORT);
-      Udp.write(tuple_buffer, msg_len);
-      Udp.endPacket();
-      Serial.println("Tuple sent.");
+       Serial.println("Sending tuple...");
+       alp_send(Udp, TupleSpace_IP, UDP_PORT, &myTuple1, ALP_OUT); 
+       free_tuple(&myTuple1);  // Zwolnienie pamięci zajmowanej przez krotkę
+       Serial.println("Tuple sent.");
     }
     }
