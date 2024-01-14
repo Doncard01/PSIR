@@ -13,7 +13,7 @@
 #include <pthread.h>
 #include "tuple_space.h"
 
-#define MY_IP       "169.254.97.104"
+#define MY_IP       "192.168.0.73"
 #define PORT_S1     "9545"
 #define PORT_S2     "24246"
 #define MAX_BUFF    1472 //UDP payload size
@@ -61,6 +61,7 @@ int ts_out(TupleSpace *tSpace, Tuple *tuple) {
 
 
 
+
 char* getCurrentTime() {
     static char timestamp[20]; // Buffer for the timestamp
     time_t now = time(NULL);
@@ -76,6 +77,9 @@ void *socket_listen(void *arg) {
         memset(&received, 0, sizeof(received));
         printf("%s Listening...\n", getCurrentTime());
         int pos=recvfrom(socket_fd, received, MAX_BUFF, 0, (struct sockaddr*)&c, &c_len );
+        
+        
+    
         if(pos < 0) {
             fprintf(stderr, "%s ERROR: %s (%s:%d)\n", getCurrentTime(), strerror(errno), __FILE__, __LINE__);
             exit(-1);
@@ -86,6 +90,10 @@ void *socket_listen(void *arg) {
         Tuple *recvTuple = (Tuple *)malloc(sizeof(Tuple));
         deserialize_tuple(received, recvTuple);
         tupleToString(recvTuple);
+        
+        if(alp_receive(socket_fd, PORT_S1, recvTuple) == TS_SUCCESS){
+        printf("Message receive\n");
+        }
         // printf("%s Received from (%s:%d): %s\n", getCurrentTime(), inet_ntoa(c.sin_addr),ntohs(c.sin_port),received);
 
         /*
@@ -120,12 +128,13 @@ void *socket_listen(void *arg) {
     return NULL;
 }
 
+
 int main() {
     memset(&h, 0, sizeof(struct addrinfo));
 
     h.ai_family = AF_INET; // Use IPv4
     h.ai_socktype = SOCK_DGRAM; // Datagram UDP
-    h.ai_flags = AI_PASSIVE;   
+    h.ai_flags = AI_PASSIVE;
 
     struct timeval tv;
     tv.tv_sec = 0;
@@ -161,10 +170,12 @@ int main() {
     pthread_t thread;
     pthread_create(&thread, NULL, socket_listen, NULL);
 
-    for(;;) {}
+    for(;;) {
+    }
 
     close(socket_fd);
     freeaddrinfo(r);
 
     return 0;
 }
+
