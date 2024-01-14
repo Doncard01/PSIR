@@ -54,7 +54,19 @@ typedef struct {
     uint8_t num_fields;
     Field *fields;
 } Tuple;
-#include <stdio.h>
+
+typedef struct {
+    char key[50];  // Identifier for the tuple
+    Tuple *tuple;   // Tuple value
+    int count;
+} TupleSpaceEntry;
+
+typedef struct {
+    TupleSpaceEntry entries[MAX_TUPLES];
+    int count;
+    pthread_mutex_t mutex;
+} TupleSpace;
+
 
 void tupleToString(Tuple *tuple) {
     printf("Printing Tuple with %d fields:\n", tuple->num_fields);

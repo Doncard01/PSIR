@@ -30,17 +30,7 @@ unsigned char mip_str[INET_ADDRSTRLEN];
 int c_len=(sizeof(c));
 
 // --- TUPLE SPACE
-typedef struct {
-    char key[50];  // Identifier for the tuple
-    Tuple *tuple;   // Tuple value
-    int count;
-} TupleSpaceEntry;
 
-typedef struct {
-    TupleSpaceEntry entries[MAX_TUPLES];
-    int count;
-    pthread_mutex_t mutex;
-} TupleSpace;
 
 int ts_out(TupleSpace *tSpace, Tuple *tuple) {
     pthread_mutex_lock(&tSpace->mutex);
