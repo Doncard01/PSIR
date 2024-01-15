@@ -95,9 +95,9 @@ void setup() {
 
 void loop() {
     time_now = ZsutMillis();
-   
+
     Serial.println("Another cycle.");
-   
+
     while(millis() < time_now + PERIOD){
         //wait approx. [PERIOD] ms
     }
@@ -136,10 +136,10 @@ void loop() {
         packetBuffer[len]='\0';
         Serial.println((char*)packetBuffer);
     } else {
-          Serial.println("Sending tuple...");
-          Udp.beginPacket(TupleSpace_IP, UDP_PORT);
-          Udp.write(sendBuffer, alp_out.msg_len);
-          Udp.endPacket();
-          Serial.println("Tuple sent.");
+        Serial.println("Sending tuple...");
+        Udp.beginPacket(TupleSpace_IP, UDP_PORT);
+        Udp.write(sendBuffer, alp_out.msg_len);
+        Udp.endPacket();
+        Serial.println("Tuple sent.");
         }   
     }

@@ -382,16 +382,16 @@ void deserialize_tuple(uint8_t *buffer, Tuple *tuple, ALPMessage *alp_message) {
 
 void freeALPMessage(ALPMessage *alp_message) {
     if (alp_message != NULL) {
-      if (alp_message->tuple != NULL) {
-          for (int i = 0; i < alp_message->tuple->num_fields; ++i) {
-              if (alp_message->tuple->fields[i].type == TS_STRING) {
-                  free(alp_message->tuple->fields[i].data.string_field.value);
-              }
-          }
-          free(alp_message->tuple->fields);
-          free(alp_message->tuple);
-      }
-      free(alp_message);
+    if (alp_message->tuple != NULL) {
+        for (int i = 0; i < alp_message->tuple->num_fields; ++i) {
+            if (alp_message->tuple->fields[i].type == TS_STRING) {
+                free(alp_message->tuple->fields[i].data.string_field.value);
+            }
+        }
+        free(alp_message->tuple->fields);
+        free(alp_message->tuple);
+    }
+    free(alp_message);
     }
 }
 
