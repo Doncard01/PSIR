@@ -12,7 +12,7 @@
 #define ALP_RD  0x08  // 0000 1000
 #define ALP_RDP 0x10  // 0001 0000
 #define ALP_ACK 0x20  // 0010 0000
-#define ALP_HLL 0x40  // 0100 0000
+#define ALP_HELLO 0x40  // 0100 0000
 
 #define TS_INT 0x01
 #define TS_FLOAT 0x02
@@ -27,11 +27,14 @@
 
 #define MAX_RETRIES 3
 #define TYPE_FIELD_SIZE 1 //byte
+#define IS_ACTUAL_FIELD_SIZE 1 //byte
+#define OP_TYPE_FIELD_SIZE 1 //byte
+#define STRING_FIELD_LENGTH_SIZE 1 //byte
+#define MSG_LENGTH_FIELD_SIZE 1 //bytes
 #define NUM_FIELD_SIZE 1 //byte
-// #define INT_FIELD_SIZE 2 //bytes, 16 bits
-// #define FLOAT_FIELD_SIZE 4 //bytes, 32 bits
 
-#define BUFSIZE 256 //max tuple length in bytes
+#define TUPLE_SIZE 253 //max tuple length in bytes
+#define ALP_MESSAGE_SIZE 255 //max ALP message length in bytes
 
 typedef struct {
     uint8_t length;
@@ -58,6 +61,10 @@ typedef struct {
 
 
 void tupleToString(Tuple *tuple) {
+    if (tuple == NULL) {
+        printf("Invalid tuple pointer\n");
+        return;
+    }
     printf("Printing Tuple with %d fields:\n", tuple->num_fields);
     printf("(");
     for (int i = 0; i < tuple->num_fields; ++i) {
@@ -90,7 +97,7 @@ typedef struct {
 } ALPMessage;
 
 
-uint16_t serialize_tuple(Tuple *tuple, uint8_t *buffer) {
+uint16_t serialize_tuple(Tuple *tuple, uint8_t *buffer, uint8_t op_type) {
     uint8_t *ptr = buffer;
 
     uint16_t length = 1; //tuple length in bytes, always starts with num_fields
@@ -98,6 +105,10 @@ uint16_t serialize_tuple(Tuple *tuple, uint8_t *buffer) {
     ptr += NUM_FIELD_SIZE;
 
     for (int i = 0; i < tuple->num_fields; i++) {
+        length += IS_ACTUAL_FIELD_SIZE;
+        memcpy(ptr, &tuple->fields[i].is_actual, IS_ACTUAL_FIELD_SIZE);
+        ptr += IS_ACTUAL_FIELD_SIZE;
+
         *(ptr++) = tuple->fields[i].type;
         length += 1;
         length += TYPE_FIELD_SIZE;
@@ -119,11 +130,111 @@ uint16_t serialize_tuple(Tuple *tuple, uint8_t *buffer) {
         }
     }
 
+    // Move the buffer content by 2 bytes
+    memmove(buffer + 2, buffer, length);
+    memcpy(buffer, &op_type, 1);
+    memcpy(buffer + 1, &length, 1);
+
+    return length + 2;
+}
+
+uint16_t serialize_alp_message(ALPMessage *alp_message, uint8_t *buffer) {
+    uint8_t *ptr = buffer;
+
+    Tuple *tuple = alp_message->tuple;
+
+    uint16_t length = OP_TYPE_FIELD_SIZE; //alp message length in bytes, always starts with op_type
+    memcpy(ptr, &alp_message->op_type, OP_TYPE_FIELD_SIZE);
+    ptr += OP_TYPE_FIELD_SIZE;
+
+    length += MSG_LENGTH_FIELD_SIZE;
+    memcpy(ptr, &alp_message->msg_len, MSG_LENGTH_FIELD_SIZE);
+    ptr += MSG_LENGTH_FIELD_SIZE;
+
+    if (tuple != NULL) {
+        length += NUM_FIELD_SIZE; //tuple length in bytes, always starts with num_fields
+        memcpy(ptr, &tuple->num_fields, NUM_FIELD_SIZE);
+        ptr += NUM_FIELD_SIZE;
+
+        for (int i = 0; i < tuple->num_fields; i++) {
+            length += IS_ACTUAL_FIELD_SIZE;
+            memcpy(ptr, &tuple->fields[i].is_actual, IS_ACTUAL_FIELD_SIZE);
+            ptr += IS_ACTUAL_FIELD_SIZE;
+            
+            length += TYPE_FIELD_SIZE;
+            memcpy(ptr, &tuple->fields[i].type, TYPE_FIELD_SIZE);
+            ptr += TYPE_FIELD_SIZE;
+            
+            if (tuple->fields[i].type == TS_INT) {
+                length += INT_FIELD_SIZE;
+                memcpy(ptr, &tuple->fields[i].data.int_field, sizeof(tuple->fields[i].data.int_field));
+                ptr += INT_FIELD_SIZE;
+            } else if (tuple->fields[i].type == TS_FLOAT) {
+                length += FLOAT_FIELD_SIZE;
+                memcpy(ptr, &tuple->fields[i].data.float_field, sizeof(tuple->fields[i].data.float_field));
+                ptr += FLOAT_FIELD_SIZE;
+            } else if (tuple->fields[i].type == TS_STRING) {
+                uint8_t field_length = tuple->fields[i].data.string_field.length;
+                *(ptr++) = field_length;
+                length += 1;
+                memcpy(ptr, tuple->fields[i].data.string_field.value, field_length);
+                ptr += field_length;
+                length += field_length;
+            }
+        }
+    }
+
     return length;
 }
 
-void deserialize_tuple(uint8_t *buffer, Tuple *tuple) {
+void deserialize_alp_message(uint8_t *buffer, ALPMessage *alp_message) {
     uint8_t *ptr = buffer;
+
+    Tuple *tuple = (Tuple *)malloc(sizeof(Tuple));
+
+    alp_message->op_type = *(uint8_t *)ptr;
+    ptr += OP_TYPE_FIELD_SIZE;
+
+    alp_message->msg_len = *(uint16_t *)ptr;
+    ptr += MSG_LENGTH_FIELD_SIZE;
+
+    if (tuple != NULL) {
+        tuple->num_fields = *(uint8_t *)ptr;
+        ptr += NUM_FIELD_SIZE;
+
+        tuple->fields = (Field *)malloc(tuple->num_fields * sizeof(Field));
+
+        for (int i = 0; i < tuple->num_fields; i++) {
+            tuple->fields[i].is_actual = *(uint8_t *)ptr;
+            ptr += IS_ACTUAL_FIELD_SIZE;
+
+            tuple->fields[i].type = *(uint8_t *)ptr;
+            ptr += TYPE_FIELD_SIZE;
+
+            if (tuple->fields[i].type == TS_INT) {
+                tuple->fields[i].data.int_field = *(uint16_t *)ptr;
+                ptr += INT_FIELD_SIZE;
+            } else if (tuple->fields[i].type == TS_FLOAT) {
+                tuple->fields[i].data.float_field = *(float *)ptr;
+                ptr += FLOAT_FIELD_SIZE;
+            } else if (tuple->fields[i].type == TS_STRING) {
+                uint8_t field_length = *(uint8_t *)ptr;
+                tuple->fields[i].data.string_field.length = field_length;
+                ptr += STRING_FIELD_LENGTH_SIZE;
+                tuple->fields[i].data.string_field.value = (char *)malloc(field_length);
+                strncpy(tuple->fields[i].data.string_field.value, (char *)ptr, field_length);
+                ptr += field_length;
+            }
+        }
+    }
+    alp_message->tuple = tuple;
+}
+
+void deserialize_tuple(uint8_t *buffer, Tuple *tuple, ALPMessage *alp_message) {
+    uint8_t *ptr = buffer;
+    alp_message->op_type = *(uint8_t *)ptr;
+    ptr += OP_TYPE_FIELD_SIZE;
+
 
     tuple->num_fields = *(uint8_t *)ptr;
     ptr += NUM_FIELD_SIZE;
@@ -149,6 +260,19 @@ void deserialize_tuple(uint8_t *buffer, Tuple *tuple) {
             ptr += field_length;
         }
     }
+}
+
+void freeALPMessage(ALPMessage *alp_message) {
+    if (alp_message->tuple != NULL) {
+        for (int i = 0; i < alp_message->tuple->num_fields; ++i) {
+            if (alp_message->tuple->fields[i].type == TS_STRING) {
+                free(alp_message->tuple->fields[i].data.string_field.value);
+            }
+        }
+        free(alp_message->tuple->fields);
+        free(alp_message->tuple);
+    }
+    free(alp_message);
 }
 
 void free_tuple(Tuple *tuple) {
