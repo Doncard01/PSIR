@@ -36,7 +36,7 @@ int main() {
 
     printf("Deserialized ALP message:\n");
 
-    tupleToString(received_alp_message->tuple);
+    printTuple(received_alp_message->tuple);
     // printBufferInBinary(buffer, received_alp_message->msg_len);
 
     // TupleSpace myTupleSpace;
@@ -50,7 +50,7 @@ int main() {
     // deserialize_tuple(buffer, received);
     // printTuple(received);
     // printBufferInBinary(buffer, msg_len);
-    // tupleToString(received);
+    // printTuple(received);
 
     // odbior UDP
     // deserialize_tuple(buffer, received);

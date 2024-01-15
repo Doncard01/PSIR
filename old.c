@@ -91,7 +91,7 @@ void *socket_listen(void *arg) {
         //TEST ODBIERANIA KROTKI
         Tuple *recvTuple = (Tuple *)malloc(sizeof(Tuple));
         deserialize_tuple(received, recvTuple);
-        tupleToString(recvTuple);
+        printTuple(recvTuple);
         
         if(alp_receive(socket_fd, PORT_S1, recvTuple) == TS_SUCCESS){
         printf("Message received\n");

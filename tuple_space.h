@@ -6,13 +6,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define ALP_OUT 0x01  // 0000 0001
-#define ALP_IN  0x02  // 0000 0010
-#define ALP_INP 0x04  // 0000 0100
-#define ALP_RD  0x08  // 0000 1000
-#define ALP_RDP 0x10  // 0001 0000
-#define ALP_ACK 0x20  // 0010 0000
-#define ALP_HELLO 0x40  // 0100 0000
+#define ALP_OUT 0x01u  // 0000 0001
+#define ALP_IN  0x02u  // 0000 0010
+#define ALP_INP 0x04u  // 0000 0100
+#define ALP_RD  0x08u  // 0000 1000
+#define ALP_RDP 0x10u  // 0001 0000
+#define ALP_ACK 0x20u  // 0010 0000
+#define ALP_HELLO 0x40u  // 0100 0000
+#define ALP_ERROR 0x80u  // 1000 0000
+#define ALP_SUCCESS 0x30u  // 0011 0000
 
 #define TS_INT 0x01
 #define TS_FLOAT 0x02
@@ -46,7 +48,7 @@ typedef struct {
     uint8_t is_actual; // YES or NO
     uint8_t type;      // TS_INT, TS_FLOAT or TS_STRING
     union {
-        int int_field;
+        int16_t int_field;
         float float_field;
         StringField string_field;
     } data;
@@ -60,7 +62,7 @@ typedef struct {
 
 
 
-void tupleToString(Tuple *tuple) {
+void printTuple(Tuple *tuple) {
     if (tuple == NULL) {
         printf("Invalid tuple pointer\n");
         return;
@@ -88,6 +90,65 @@ void tupleToString(Tuple *tuple) {
     }
     printf(")\n");
 }
+
+char* tupleToString(Tuple *tuple) {
+    if (tuple == NULL) {
+        return NULL;
+    }
+
+    int bufferSize = 0;
+    for (int i = 0; i < tuple->num_fields; i++) {
+        switch (tuple->fields[i].type) {
+            case TS_INT:
+                bufferSize += INT_FIELD_SIZE + 3;
+                break;
+            case TS_FLOAT:
+                bufferSize += FLOAT_FIELD_SIZE + 3;
+                break;
+            case TS_STRING:
+                bufferSize += tuple->fields[i].data.string_field.length + 3;
+                break;
+            default:
+                break;
+        }
+    }
+
+    char* buffer = (char*)malloc(bufferSize + 1);
+    if (buffer == NULL) {
+        return NULL;
+    }
+
+    int offset = 0;
+    for (int i = 0; i < tuple->num_fields; i++) {
+        if (i != 0) {
+            buffer[offset++] = ',';
+            buffer[offset++] = ' ';
+        }
+
+        switch (tuple->fields[i].type) {
+            case TS_INT:
+                sprintf(buffer + offset, "(%d)", tuple->fields[i].data.int_field);
+                offset += INT_FIELD_SIZE + 2;
+                break;
+            case TS_FLOAT:
+                sprintf(buffer + offset, "(%f)", tuple->fields[i].data.float_field);
+                offset += FLOAT_FIELD_SIZE + 2;
+                break;
+            case TS_STRING:
+                buffer[offset++] = '(';
+                strncpy(buffer + offset, tuple->fields[i].data.string_field.value, tuple->fields[i].data.string_field.length);
+                offset += tuple->fields[i].data.string_field.length;
+                buffer[offset++] = ')';
+                break;
+            default:
+                break;
+        }
+    }
+
+    buffer[bufferSize] = '\0';
+    return buffer;
+}
+
 
 // ALP message structure
 typedef struct {
@@ -283,20 +344,6 @@ void free_tuple(Tuple *tuple) {
     }
     free(tuple->fields);
     free(tuple);
-}
-
-
-void printTuple(Tuple *tuple) {
-    for (int i = 0; i < tuple->num_fields; ++i) {
-        if (tuple->fields[i].type == TS_INT) {
-            printf("Field %d (Type: INT): %d\n", i, tuple->fields[i].data.int_field);
-        } else if (tuple->fields[i].type == TS_FLOAT) {
-            printf("Field %d (Type: FLOAT): %f\n", i, tuple->fields[i].data.float_field);
-        } else if (tuple->fields[i].type == TS_STRING) {
-            printf("Field %d (Type: STRING): %s[len=%d]\n", i, tuple->fields[i].data.string_field.value, 
-            tuple->fields[i].data.string_field.length);    
-        }
-    }
 }
 
 void printBufferInBinary(uint8_t *buffer, uint16_t length) {
