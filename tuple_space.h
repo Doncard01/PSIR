@@ -90,6 +90,63 @@ void printTuple(Tuple *tuple) {
     }
     printf(")\n");
 }
+char* tupleToString(Tuple* tuple) {
+    if (tuple == NULL) {
+        return NULL;
+    }
+
+    int bufferSize = 2;  // Initial size for '(' and null terminator
+    for (int i = 0; i < tuple->num_fields; i++) {
+        switch (tuple->fields[i].type) {
+            case TS_INT:
+                bufferSize += INT_FIELD_SIZE;
+                break;
+            case TS_FLOAT:
+                bufferSize += FLOAT_FIELD_SIZE;
+                break;
+            case TS_STRING:
+                bufferSize += tuple->fields[i].data.string_field.length + 3;  // +3 for '(' and ')' and null terminator
+                break;
+            default:
+                break;
+        }
+
+        if (i != tuple->num_fields - 1) {
+            bufferSize += 2;  // Add 2 for comma and space
+        }
+    }
+
+    char* buffer = (char*)malloc(bufferSize);
+    if (buffer == NULL) {
+        return NULL;
+    }
+
+    int offset = sprintf(buffer, "(");  // Start with '('
+    for (int i = 0; i < tuple->num_fields; i++) {
+        if (i != 0) {
+            offset += sprintf(buffer + offset, ", ");
+        }
+
+        switch (tuple->fields[i].type) {
+            case TS_INT:
+                offset += sprintf(buffer + offset, "%d", tuple->fields[i].data.int_field);
+                break;
+            case TS_FLOAT:
+                offset += sprintf(buffer + offset, "%.6f", tuple->fields[i].data.float_field);
+                break;
+            case TS_STRING:
+                offset += sprintf(buffer + offset, "%.*s", tuple->fields[i].data.string_field.length, tuple->fields[i].data.string_field.value);
+                break;
+            default:
+                break;
+        }
+    }
+
+    sprintf(buffer + offset, ")");
+    return buffer;
+}
+
+/*
 
 char* tupleToString(Tuple *tuple) {
     if (tuple == NULL) {
@@ -148,7 +205,7 @@ char* tupleToString(Tuple *tuple) {
     buffer[bufferSize] = '\0';
     return buffer;
 }
-
+*/
 
 // ALP message structure
 typedef struct {
@@ -324,16 +381,18 @@ void deserialize_tuple(uint8_t *buffer, Tuple *tuple, ALPMessage *alp_message) {
 }
 
 void freeALPMessage(ALPMessage *alp_message) {
-    if (alp_message->tuple != NULL) {
-        for (int i = 0; i < alp_message->tuple->num_fields; ++i) {
-            if (alp_message->tuple->fields[i].type == TS_STRING) {
-                free(alp_message->tuple->fields[i].data.string_field.value);
-            }
-        }
-        free(alp_message->tuple->fields);
-        free(alp_message->tuple);
+    if (alp_message != NULL) {
+      if (alp_message->tuple != NULL) {
+          for (int i = 0; i < alp_message->tuple->num_fields; ++i) {
+              if (alp_message->tuple->fields[i].type == TS_STRING) {
+                  free(alp_message->tuple->fields[i].data.string_field.value);
+              }
+          }
+          free(alp_message->tuple->fields);
+          free(alp_message->tuple);
+      }
+      free(alp_message);
     }
-    free(alp_message);
 }
 
 void free_tuple(Tuple *tuple) {

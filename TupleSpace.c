@@ -78,13 +78,18 @@ int tuple_matches(Tuple *pattern, Tuple *checked) {
     return YES;  // Wszystkie pola pasują
 }
 
+
 void send_alp_message(uint8_t op_type, TupleSpaceEntry *entry) {
     uint8_t *buffer = (uint8_t *)malloc(ALP_MESSAGE_SIZE * sizeof(uint8_t));
     memset(buffer, 0, ALP_MESSAGE_SIZE * sizeof(uint8_t));
 
     ALPMessage *alp_message = (ALPMessage *)malloc(ALP_MESSAGE_SIZE * sizeof(uint8_t));
     alp_message->op_type = op_type;
-    alp_message->tuple = entry->tuple;
+    if (op_type == ALP_ACK) {
+        alp_message->tuple = NULL;
+    } else {
+        alp_message->tuple = entry->tuple;
+    }
     alp_message->msg_len = serialize_tuple(NULL, buffer, ALP_ACK);
     if((pos=sendto(socket_fd, buffer, alp_message->msg_len, 0, (const struct sockaddr *)&c, c_len )) < 0) {
         fprintf(stderr, "%s ERROR: %s (%s:%d)\n", getCurrentTime(), strerror(errno), __FILE__, __LINE__);   
@@ -146,7 +151,7 @@ int ts_out(TupleSpace *tSpace, Tuple *tuple) {
         return TS_FAIL;  // Tuple space is full
     }
     printf("Tuple %s added to Tuple Space.\n", tupleToString(tuple));
-    send_alp_message(ALP_SUCCESS, NULL);
+    //send_alp_message(ALP_SUCCESS, NULL);
 
     TupleSpaceEntry *entry = &tSpace->entries[tSpace->count++];
     entry->tuple = tuple;
@@ -202,39 +207,46 @@ void *socket_listen(void *arg) {
         memset(&received, 0, sizeof(received));
         printf("%s Waiting for message...\n", getCurrentTime());
         pos=recvfrom(socket_fd, received, MAX_BUFF, 0, (struct sockaddr*)&c, &c_len );
+        
+        
         if(pos < 0) {
             fprintf(stderr, "%s ERROR: %s (%s:%d)\n", getCurrentTime(), strerror(errno), __FILE__, __LINE__);
             return TS_FAIL;
         } else {
             printf("%s Received message from %s:%d\n", getCurrentTime(), inet_ntoa(c.sin_addr), ntohs(c.sin_port));
-            send_alp_message(ALP_ACK, NULL);
+            //send_alp_message(ALP_ACK, NULL);
         }
         
         ALPMessage *alp_message = (ALPMessage *)malloc(ALP_MESSAGE_SIZE * sizeof(uint8_t));
+        if (alp_message == NULL) {
+            fprintf(stderr, "%s ERROR: Unable to allocate memory for ALPMessage\n", getCurrentTime());
+            return TS_FAIL;
+        }
         deserialize_alp_message(received, alp_message);
         Tuple *received_tuple = alp_message->tuple;
         printTuple(received_tuple);
+        
 
-    switch (alp_message->op_type) {
-        case ALP_OUT:
-            ts_out(&tSpace, received_tuple);
-            printf("Received ALP_OUT message. Added tuple to the tuple space.\n");
-            break;
-
-        case ALP_INP:
-            ts_inp(&tSpace, received_tuple);
-            printf("Received ALP_INP message. Sent matching tuple back to the same IP address.\n");
-            break;
-        case ALP_ACK:
-            break;
-        case ALP_RDP:
-            ts_rdp(&tSpace, received_tuple);
-            printf("Received ALP_RDP message. Sent matching tuple back to the same IP address.\n");
-            break;
-        default:
-            printf("Received message with unknown operation type: %d\n", alp_message->op_type);
-            break;
-    }
+        switch (alp_message->op_type) {
+            case ALP_OUT:
+                ts_out(&tSpace, received_tuple);
+                printf("Received ALP_OUT message. Added tuple to the tuple space.\n");
+                break;
+    
+            case ALP_INP:
+                ts_inp(&tSpace, received_tuple);
+                printf("Received ALP_INP message. Sent matching tuple back to the same IP address.\n");
+                break;
+            case ALP_ACK:
+                break;
+            case ALP_RDP:
+                ts_rdp(&tSpace, received_tuple);
+                printf("Received ALP_RDP message. Sent matching tuple back to the same IP address.\n");
+                break;
+            default:
+                printf("Received message with unknown operation type: %d\n", alp_message->op_type);
+                break;
+        }
         freeALPMessage(alp_message);
 
     }
