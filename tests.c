@@ -3,6 +3,21 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+TupleSpace* tSpace = (TupleSpace*)malloc(sizeof(TupleSpace));
+tSpace->count = 0;
+pthread_mutex_init(&tSpace->mutex, NULL);
+
+// Inicjalizacja TupleSpaceEntries
+for (int i = 0; i < MAX_TUPLES; i++) {
+    tSpace->entries[i].tuple = NULL;
+    tSpace->entries[i].key = 0;
+for (int i = 0; i < tSpace->count; i++) {
+    freeTupleSpaceEntry(&tSpace->entries[i]);
+}
+
+// Zwolnienie pamięci TupleSpace
+pthread_mutex_destroy(&tSpace->mutex);
+free(tSpace);
 
 int main() {
     uint8_t *buffer = (uint8_t *)malloc(ALP_MESSAGE_SIZE * sizeof(uint8_t));

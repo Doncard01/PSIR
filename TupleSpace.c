@@ -243,12 +243,20 @@ void *socket_listen(void *arg) {
 
 
 int main() {
+    TupleSpace* tSpace = (TupleSpace*)malloc(sizeof(TupleSpace));
+    tSpace->count = 0;
+    tSpace->mutex = tSpaceMutex;
+
+    pthread_mutex_init(&tSpace->mutex, NULL);
+    // Inicjalizacja TupleSpaceEntries
+    for (int i = 0; i < MAX_TUPLES; i++) {
+        tSpace->entries[i].tuple = NULL;
+        tSpace->entries[i].key = 0;
+    }
+
     memset(&h, 0, sizeof(struct addrinfo));
     memset(&c, 0, sizeof(c));
     memset(&mip_str, 0, sizeof(mip_str));
-    tSpace.count = 0;
-    tSpace.mutex = tSpaceMutex;
-
 
     h.ai_family = AF_INET; // Use IPv4
     h.ai_socktype = SOCK_DGRAM; // Datagram UDP
@@ -291,6 +299,13 @@ int main() {
     for(;;) {
     }
 
+
+
+    for (int i = 0; i < tSpace->count; i++) {
+        freeTupleSpaceEntry(&tSpace->entries[i]);
+    }
+    pthread_mutex_destroy(&tSpace->mutex);
+    free(tSpace);
     close(socket_fd);
     freeaddrinfo(r);
 
